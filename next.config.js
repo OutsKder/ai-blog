@@ -23,7 +23,6 @@ const nextConfig = {
   output: 'standalone',  // 优化输出
   poweredByHeader: false, // 移除 X-Powered-By 头
   reactStrictMode: true,  // 使用严格模式
-  swcMinify: true,        // 使用 SWC 进行代码压缩
 };
 
 module.exports = nextConfig; 
