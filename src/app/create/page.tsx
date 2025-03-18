@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+import { generateBlogContent } from '@/lib/deepseek';
 
 // 创建 Supabase 客户端
 const supabase = createClient(
@@ -16,7 +17,11 @@ export default function CreatePage() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [topic, setTopic] = useState('');
+  const [style, setStyle] = useState('专业');
+  const [keywords, setKeywords] = useState('');
+  const [length, setLength] = useState('medium');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState('');
 
   // 检查用户是否已登录
   useEffect(() => {
@@ -46,48 +51,44 @@ export default function CreatePage() {
     checkAuth();
   }, [router]);
   
-  // 生成博客内容
-  const generateBlog = async () => {
+  // 生成按钮点击处理函数
+  const handleGenerate = async () => {
     if (!topic) {
-      alert('请输入博客主题');
+      alert('请至少输入一个主题');
       return;
     }
     
     setIsGenerating(true);
+    setContent(''); // 清空之前的内容
+    
     try {
-      // 这里将来可以接入实际的 DeepSeek API
-      // 目前使用模拟数据
-      setTimeout(() => {
-        setTitle(`关于${topic}的深度分析`);
-        setContent(`这是一篇关于${topic}的AI生成博客文章。
-
-## ${topic}的基本概述
-
-${topic}是一个非常有趣的领域，涉及到许多方面的知识和应用。
-
-## 主要内容
-
-1. ${topic}的发展历史
-2. ${topic}的现状分析
-3. ${topic}的未来趋势
-
-## 结论
-
-通过深入研究${topic}，我们可以发现这一领域有着巨大的潜力和发展空间。`);
-        
-        setIsGenerating(false);
-      }, 2000);
+      // 调用带有详细参数的函数
+      const generatedContent = await generateBlogContent({
+        title: title || `关于${topic}的分析`, 
+        topic,
+        style,
+        keywords,
+        length
+      });
+      
+      // 使用生成的内容更新状态
+      setContent(generatedContent);
+      console.log('生成的内容:', generatedContent.substring(0, 100) + '...');
     } catch (error) {
-      console.error('生成博客失败:', error);
+      console.error('生成内容失败:', error);
+      setError('生成内容时出错，请稍后再试');
+    } finally {
       setIsGenerating(false);
-      alert('生成博客失败，请重试');
     }
   };
   
   // 保存博客
   const saveBlog = async () => {
-    if (!title || !content) {
-      alert('标题和内容不能为空');
+    // 使用 topic 作为默认标题
+    const finalTitle = title || `关于${topic}的分析`;
+    
+    if (!topic || !content) {
+      alert('主题和内容不能为空');
       return;
     }
     
@@ -100,26 +101,31 @@ ${topic}是一个非常有趣的领域，涉及到许多方面的知识和应用
       }
       
       const userId = session.user.id;
+      console.log('准备保存博客:', { title: finalTitle, contentLength: content.length, userId });
       
-      // 保存到 Supabase
-      const { data, error } = await supabase.from('blogs').insert([
-        { 
-          title, 
-          content, 
-          user_id: userId,
-          tags: [topic], 
-        }
-      ]).select();
+      // 使用 finalTitle 而不是 title
+      const { data, error } = await supabase
+        .from('posts')
+        .insert({
+          title: finalTitle,
+          content,
+          author_id: userId,
+          published: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error('保存博客错误:', error);
+        throw error;
+      }
       
       alert('博客保存成功！');
-      
-      // 跳转到仪表板
       router.push('/dashboard');
     } catch (error) {
       console.error('保存博客失败:', error);
-      alert('保存失败，请重试');
+      alert(`保存失败: ${error.message || '请检查网络连接并重试'}`);
     }
   };
   
@@ -137,36 +143,81 @@ ${topic}是一个非常有趣的领域，涉及到许多方面的知识和应用
       
       <div className="mb-8 bg-gray-50 p-6 rounded-lg">
         <h2 className="text-xl font-semibold mb-4">使用 AI 生成内容</h2>
-        <div className="flex flex-col md:flex-row gap-4">
-          <input
-            type="text"
-            placeholder="输入博客主题，如：人工智能、Web开发、旅游攻略..."
-            value={topic}
-            onChange={(e) => setTopic(e.target.value)}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">博客主题</label>
+            <input
+              type="text"
+              placeholder="例如：人工智能、南京旅游、健康饮食..."
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">博客标题 (可选)</label>
+            <input
+              type="text"
+              placeholder="留空将自动生成"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">写作风格</label>
+            <select
+              value={style}
+              onChange={(e) => setStyle(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="专业">专业/学术</option>
+              <option value="通俗">通俗易懂</option>
+              <option value="幽默">幽默诙谐</option>
+              <option value="故事">故事性</option>
+              <option value="深度">深度分析</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">文章长度</label>
+            <select
+              value={length}
+              onChange={(e) => setLength(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="short">短文 (约500字)</option>
+              <option value="medium">中等 (约1000字)</option>
+              <option value="long">长文 (约2000字)</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">关键词 (可选)</label>
+            <input
+              type="text"
+              placeholder="用逗号分隔多个关键词"
+              value={keywords}
+              onChange={(e) => setKeywords(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        
+        <div className="flex justify-center mt-4">
           <button
-            onClick={generateBlog}
-            disabled={isGenerating}
+            onClick={handleGenerate}
+            disabled={isGenerating || !topic}
             className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
           >
-            {isGenerating ? '生成中...' : '生成博客'}
+            {isGenerating ? '生成中...' : '生成博客内容'}
           </button>
         </div>
-      </div>
-      
-      <div className="mb-6">
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-          博客标题
-        </label>
-        <input
-          id="title"
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="输入博客标题"
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
       </div>
       
       <div className="mb-6">

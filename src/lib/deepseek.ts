@@ -1,30 +1,42 @@
 // 这里是与 DeepSeek 模型交互的工具函数
-export async function generateBlogContent(prompt: string) {
+export async function generateBlogContent(prompt: string | { 
+  title: string, 
+  topic: string, 
+  style?: string, 
+  keywords?: string,
+  length?: string 
+}): Promise<string> {
   try {
-    // 实际项目中，这里会连接到您的私有化部署的 DeepSeek 模型
-    // 以下是示例实现
-    const response = await fetch(process.env.DEEPSEEK_API_URL || '', {
+    // 统一处理不同的输入格式
+    let requestData;
+    
+    if (typeof prompt === 'string') {
+      requestData = { topic: prompt, title: `关于${prompt}的分析` };
+    } else {
+      requestData = prompt;
+    }
+
+    console.log('正在调用内容生成API...');
+    
+    // 调用服务器端 API 路由
+    const response = await fetch('/api/generate-content', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`
       },
-      body: JSON.stringify({
-        prompt,
-        max_tokens: 2000,
-        temperature: 0.7,
-      })
+      body: JSON.stringify(requestData)
     });
-
+    
     if (!response.ok) {
-      throw new Error(`DeepSeek API 请求失败: ${response.statusText}`);
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP错误: ${response.status}`);
     }
-
+    
     const data = await response.json();
-    return data.choices[0].text;
-  } catch (error) {
-    console.error('调用 DeepSeek API 时出错:', error);
-    // 为了演示，返回模拟内容
-    return `这是一篇由 DeepSeek 生成的博客文章。\n\n在实际部署中，这里将是由 DeepSeek 模型生成的高质量内容。\n\n该内容将基于您提供的主题、风格和关键词进行个性化定制。`;
+    return data.content;
+    
+  } catch (error: any) {
+    console.error('内容生成失败:', error);
+    return `生成内容失败: ${error.message || '未知错误'}。请稍后再试。`;
   }
 } 
