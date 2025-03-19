@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     console.log('已清理现有会话');
     
     // 使用 Supabase 进行身份验证
-    const { data: { user }, error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: email.toLowerCase(),
       password: password
     });
@@ -28,12 +28,12 @@ export async function POST(request: Request) {
     if (error) {
       console.error('登录失败:', error.message);
       return NextResponse.json(
-        { message: error.message },
+        { message: '登录失败: ' + error.message },
         { status: 400 }
       );
     }
 
-    if (!user) {
+    if (!data.user) {
       console.log('未找到用户');
       return NextResponse.json(
         { message: '用户不存在' },
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     }
 
     // 检查用户是否已验证邮箱
-    if (!user.email_confirmed_at && user.confirmation_sent_at) {
+    if (!data.user.email_confirmed_at && data.user.confirmation_sent_at) {
       await supabase.auth.signOut();
       return NextResponse.json(
         { message: '请先验证您的邮箱后再登录' },
@@ -50,13 +50,13 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log('用户验证成功:', user.email);
+    console.log('用户验证成功:', data.user.email);
 
     // 获取用户的详细信息
     const { data: profile, error: profileError } = await supabase
       .from('users')
       .select('*')
-      .eq('id', user.id)
+      .eq('id', data.user.id)
       .single();
 
     if (profileError) {
@@ -86,14 +86,14 @@ export async function POST(request: Request) {
     return NextResponse.json({
       message: '登录成功',
       user: {
-        id: user.id,
-        name: profile?.name || user.email?.split('@')[0],
-        email: user.email,
-        createdAt: user.created_at
+        id: data.user.id,
+        name: profile?.name || data.user.email?.split('@')[0],
+        email: data.user.email,
+        createdAt: data.user.created_at
       }
     });
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('登录时出错:', error);
     return NextResponse.json(
       { message: '服务器错误' },

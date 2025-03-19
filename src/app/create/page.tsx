@@ -132,7 +132,10 @@ export default function CreatePage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p className="text-xl">加载中...</p>
+        <p className="text-xl">加载中...</p>1. 登录您的 Gmail 账户
+进入【设置】-> 【转发和 POP/IMAP】
+确保 IMAP 已启用
+如果您的 Gmail 是 G Suite 企业账户，可能需要管理员启用 SMTP 访问
       </div>
     );
   }
