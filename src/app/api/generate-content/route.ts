@@ -26,7 +26,7 @@ ${keywords ? `- 需要包含的关键词：${keywords}` : ''}
     console.log('使用的 API URL:', process.env.DEEPSEEK_API_URL);
     
     // 使用自定义 API 端点
-    const response = await fetch(process.env.DEEPSEEK_API_URL!, {
+    const response = await fetch(process.env.DEEPSEEK_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
