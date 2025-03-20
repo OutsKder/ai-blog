@@ -5,7 +5,6 @@ export const dynamic = 'force-dynamic';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FcGoogle } from 'react-icons/fc';
 
 export default function Register() {
   const router = useRouter();
@@ -53,10 +52,6 @@ export default function Register() {
     } finally {
       setIsLoading(false);
     }
-  };
-  
-  const handleGoogleLogin = async () => {
-    // Google 登录逻辑
   };
 
   return (
@@ -145,25 +140,6 @@ export default function Register() {
             </button>
           </div>
         </form>
-        
-        <div className="mt-6 relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">或者</span>
-          </div>
-        </div>
-        
-        <div className="mt-6">
-          <button
-            onClick={handleGoogleLogin}
-            className="w-full flex justify-center items-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <FcGoogle className="h-5 w-5 mr-2" />
-            <span>使用 Google 账号注册/登录</span>
-          </button>
-        </div>
         
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
